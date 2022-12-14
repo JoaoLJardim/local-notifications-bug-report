@@ -28,24 +28,41 @@ const Tab1: React.FC = () => {
     });
   }, []);
 
+  const addNotification = useCallback(
+    (nextNotificationId: number) => {
+      LocalNotifications.schedule({
+        notifications: [
+          {
+            id: nextNotificationId,
+            title: `${nextNotificationId} notification`,
+            body: "",
+          },
+        ],
+      }).then(() => {
+        setMessage((v) => [...v, `Added ${nextNotificationId} notification`]);
+        updateNotificationList();
+      });
+    },
+    [updateNotificationList]
+  );
+
   const handlerAddNotification = useCallback(() => {
     const nextNotificationId = currentId + 1;
 
-    LocalNotifications.schedule({
-      notifications: [
-        {
-          id: nextNotificationId,
-          title: `${nextNotificationId} notification`,
-          body: "",
-        },
-      ],
-    }).then(() => {
-      setMessage((v) => [...v, `Added ${nextNotificationId} notification`]);
-      updateNotificationList();
+    LocalNotifications.checkPermissions().then(({ display }) => {
+      if (display === "prompt" || display === "prompt-with-rationale") {
+        LocalNotifications.requestPermissions().then(({ display }) => {
+          if (display === "granted") {
+            addNotification(nextNotificationId);
+          }
+        });
+      } else if (display === "granted") {
+        addNotification(nextNotificationId);
+      }
     });
 
     setCurrentId((v) => v + 1);
-  }, [currentId, updateNotificationList]);
+  }, [currentId, addNotification]);
 
   const handlerNotificationDelete = useCallback(
     (id: number) => {
